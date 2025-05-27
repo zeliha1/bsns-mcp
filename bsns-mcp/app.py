@@ -2,11 +2,20 @@
 #!/usr/bin/env python3
 
 import asyncio
+import nltk
 from mcp.server.models import InitializationOptions
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 from summarizer import summarize_article
+
+# Download required NLTK data
+try:
+    nltk.download('punkt', quiet=True)
+    nltk.download('punkt_tab', quiet=True)
+    nltk.download('stopwords', quiet=True)
+except Exception as e:
+    print(f"Warning: Could not download NLTK data: {e}")
 
 server = Server("bsns-mcp")
 

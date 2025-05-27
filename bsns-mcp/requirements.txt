@@ -2,3 +2,4 @@
 mcp
 newspaper3k
 sumy
+nltk
