@@ -1,4 +1,4 @@
 
-flask
+mcp
 newspaper3k
 sumy

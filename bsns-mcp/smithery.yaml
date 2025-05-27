@@ -1,7 +1,6 @@
 name: bsns-mcp
-description: İş haberlerini özetleyen bir MCP
+description: İş haberlerini özetleyen bir MCP serveri
 entrypoint: app.py
 runtime: python3
-ports:
-  - 5000
+type: stdio
 

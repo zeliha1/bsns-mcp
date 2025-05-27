@@ -1,25 +1,83 @@
 
-from flask import Flask, request, jsonify
+#!/usr/bin/env python3
+
+import asyncio
+from mcp.server.models import InitializationOptions
+import mcp.types as types
+from mcp.server import NotificationOptions, Server
+import mcp.server.stdio
 from summarizer import summarize_article
 
-app = Flask(__name__)
+server = Server("bsns-mcp")
 
-@app.route("/")
-def home():
-    return {"status": "BSNS MCP API is running"}
+@server.list_tools()
+async def handle_list_tools() -> list[types.Tool]:
+    """
+    List available tools.
+    Each tool specifies its arguments using JSON Schema validation.
+    """
+    return [
+        types.Tool(
+            name="summarize_business_article",
+            description="Summarize a business article from a given URL",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL of the business article to summarize",
+                    }
+                },
+                "required": ["url"],
+            },
+        )
+    ]
 
-@app.route("/summarize", methods=["POST"])
-def summarize():
-    data = request.get_json()
-    url = data.get("url")
-    if not url:
-        return jsonify({"error": "Missing URL"}), 400
-    
-    try:
-        summary = summarize_article(url)
-        return jsonify({"summary": summary})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+@server.call_tool()
+async def handle_call_tool(
+    name: str, arguments: dict | None
+) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+    """
+    Handle tool execution requests.
+    """
+    if name == "summarize_business_article":
+        if not arguments or "url" not in arguments:
+            raise ValueError("Missing required argument: url")
+
+        url = arguments["url"]
+        try:
+            summary = summarize_article(url)
+            return [
+                types.TextContent(
+                    type="text",
+                    text=f"Business Article Summary:\n\n{summary}"
+                )
+            ]
+        except Exception as e:
+            return [
+                types.TextContent(
+                    type="text",
+                    text=f"Error summarizing article: {str(e)}"
+                )
+            ]
+    else:
+        raise ValueError(f"Unknown tool: {name}")
+
+async def main():
+    # Run the server using stdin/stdout streams
+    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="bsns-mcp",
+                server_version="0.1.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
+                ),
+            ),
+        )
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    asyncio.run(main())
