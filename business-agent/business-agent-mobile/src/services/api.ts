@@ -33,12 +33,15 @@ class ApiService {
     // Development için bilgisayarınızın IP adresini kullanın
     // Production'da gerçek domain kullanın
     this.baseUrl = __DEV__
-      ? 'http://172.20.10.3:4111'  // Development - IP adresinizi buraya yazın
+      ? 'http://10.56.178.77:4111'  // Development - IP adresinizi buraya yazın
       : 'https://your-production-url.com'; // Production
   }
 
   async analyzeArticle(request: AnalysisRequest): Promise<AnalysisResponse> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 saniye timeout
+
       const response = await fetch(`${this.baseUrl}/api/agents/businessAgent/generate`, {
         method: 'POST',
         headers: {
@@ -52,8 +55,11 @@ class ApiService {
             }
           ],
           maxSteps: request.maxSteps || 5
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -73,10 +79,15 @@ class ApiService {
 
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
+
+      const response = await fetch(`${this.baseUrl}/api/agents`, {
         method: 'GET',
-        timeout: 5000,
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
       return response.ok;
     } catch (error) {
       console.error('Connection test failed:', error);
